@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>График ТО SWD 250</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, sans-serif; background: #f0f2f5; padding: 12px; }
+        .card { background: #fff; border-radius: 12px; padding: 14px; margin-bottom: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); border-left: 6px solid #4CAF50; }
+        .card.red { border-left-color: #FF4444; background: #FFF5F5; }
+        .card.yellow { border-left-color: #FFAA00; background: #FFFBF0; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .name { font-weight: bold; font-size: 16px; }
+        .hours { font-size: 18px; font-weight: bold; color: #333; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 14px; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-weight: bold; font-size: 12px; }
+        .badge.red { background: #FF4444; color: #fff; }
+        .badge.yellow { background: #FFAA00; color: #000; }
+        .badge.green { color: #4CAF50; }
+        h1 { text-align: center; margin-bottom: 12px; font-size: 18px; color: #1a237e; }
+        .update { text-align: center; font-size: 11px; color: #999; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>🔧 График ТО SWD 250</h1>
+    <p class="update">Загрузка данных...</p>
+    <div id="cards"></div>
+    <p class="update" id="time"></p>
+
+    <script>
+        const DATA_URL = "https://script.google.com/macros/s/AKfycbw2LmnS3Y6PqFpjkG6v2QwJ3bR5kL8N1mX4Za7d0/exec";
+        
+        async function loadData() {
+            try {
+                const res = await fetch(DATA_URL);
+                const data = await res.json();
+                render(data);
+            } catch(e) {
+                document.getElementById("cards").innerHTML = "<p style='text-align:center;color:red'>Ошибка загрузки</p>";
+            }
+        }
+
+        function render(stations) {
+            let html = "";
+            for (let s of stations) {
+                let worst = "green";
+                for (let k of ["to1","to2","to3","to4"]) {
+                    if (s[k].overdue) worst = "red";
+                    else if (s[k].warn && worst === "green") worst = "yellow";
+                }
+                html += `<div class="card ${worst}">
+                    <div class="header">
+                        <span class="name">${s.name}</span>
+                        <span class="hours">${s.runtime} ч</span>
+                    </div>
+                    <div class="grid">`;
+                for (let [k, label] of [["to1","ТО-1 (250)"],["to2","ТО-2 (500)"],["to3","ТО-3 (1000)"],["to4","ТО-4 (2000)"]]) {
+                    let t = s[k];
+                    let badge;
+                    if (t.overdue) badge = `<span class="badge red">ПРОСРОЧЕНО ${-t.rem}ч!</span>`;
+                    else if (t.warn) badge = `<span class="badge yellow">СКОРО ${t.days}д</span>`;
+                    else badge = `<span class="badge green">OK ${t.days}д</span>`;
+                    html += `<div>${label}: ${badge}</div>`;
+                }
+                html += `</div></div>`;
+            }
+            document.getElementById("cards").innerHTML = html;
+            document.getElementById("time").textContent = "Обновлено: " + new Date().toLocaleString("ru-RU");
+        }
+
+        loadData();
+        setInterval(loadData, 60000);
+    </script>
+</body>
+</html>
